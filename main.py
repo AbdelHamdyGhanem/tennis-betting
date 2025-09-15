@@ -343,7 +343,7 @@ def process_video(input_path, output_path=None):
 
     # Interactive mode
     show_preview = True  # Enable for betting dashboard
-    playback_speed = 2.8  # Speed multiplier - 2x faster than normal
+    playback_speed = 3.2  # Speed multiplier - 2x faster than normal
     
     # Setup interactive window
     if show_preview:
