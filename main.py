@@ -343,7 +343,7 @@ def process_video(input_path, output_path=None):
 
     # Interactive mode
     show_preview = True  # Enable for betting dashboard
-    playback_speed = 2  # Speed multiplier - 2x faster than normal
+    playback_speed = 2.8  # Speed multiplier - 2x faster than normal
     
     # Setup interactive window
     if show_preview:
@@ -526,8 +526,8 @@ def process_video(input_path, output_path=None):
             if paused:
                 # Draw pause indicator
                 pause_overlay = frame_with_dashboard.copy()
-                cv2.rectangle(pause_overlay, (width//2-100, height//2-50), (width//2+100, height//2+50), (0, 0, 0), -1)
-                cv2.rectangle(pause_overlay, (width//2-100, height//2-50), (width//2+100, height//2+50), (0, 255, 255), 3)
+                cv2.rectangle(pause_overlay, (width//2-200, height//2-50), (width//2+250, height//2+50), (0, 0, 0), -1)
+                cv2.rectangle(pause_overlay, (width//2-200, height//2-50), (width//2+250, height//2+50), (0, 255, 255), 3)
                 cv2.putText(pause_overlay, "PAUSED", (width//2-70, height//2-10), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 255, 255), 2)
                 cv2.putText(pause_overlay, "Press SPACE to resume", (width//2-120, height//2+30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
                 frame_with_dashboard = pause_overlay
@@ -593,10 +593,7 @@ def process_video(input_path, output_path=None):
         print("\nNo bet was confirmed.")
 
 if __name__ == "__main__":
-    input_video = "test_1.mp4"
+    input_video = "test_2.mp4"
     # Don't create output file - set to None for live preview only
     output_video = None  # Change to a path if you want to save output
     process_video(input_video, output_video)
-
-# improve the frames and how the match loks like because its a bit choppy and the frames are slow fix that so it looks smooth
-# try to focus on focusing on only the tennis players and ignoring everyone else and also try to focus onthe player so we dont lose them
