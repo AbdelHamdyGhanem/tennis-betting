@@ -1,0 +1,4 @@
+opencv-python>=4.7.0
+numpy>=1.25.0
+ultralytics>=8.0.0
+filterpy>=1.4.5
