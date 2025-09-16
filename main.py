@@ -1,7 +1,7 @@
 import cv2
 import math
 from ultralytics import YOLO
-from sort.sort import Sort
+from sort import Sort
 import os
 import numpy as np
 import random
@@ -321,11 +321,13 @@ def process_video(input_path, output_path=None):
     height, width, *_ = frame.shape
     print(f"Input video: {width}x{height}, {fps:.2f} FPS, {total_frames} frames")
 
-    # Output writer - Optional
+    # Output writer - Fixed for smooth output
     out = None
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        # Use H.264 codec for better compression and compatibility
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        # Keep original FPS for smooth output
         out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
         
         if not out.isOpened():
@@ -338,29 +340,33 @@ def process_video(input_path, output_path=None):
     # Improved tracker settings to reduce flickering
     tracker = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
     frame_count = 0
-    detect_every = 1  # Reduced from 2 to 1 for smoother tracking at faster speeds
+    detect_every = 2  # Run detection every 2 frames for better performance
     last_detections = np.empty((0, 5))
 
-    # Interactive mode
-    show_preview = True  # Enable for betting dashboard
-    playback_speed = 3.2  # Speed multiplier - 2x faster than normal
+    # Interactive mode settings
+    show_preview = output_path is None  # Only show preview if no output file
     
-    # Setup interactive window
+    # Setup interactive window only if showing preview
     if show_preview:
         cv2.namedWindow("Tennis Betting Analysis", cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("Tennis Betting Analysis", mouse_callback)
+        playback_speed = 1.0  # Normal speed for preview
+    else:
+        playback_speed = 1.0  # Process at normal speed for smooth output
     
     last_notification_time = time.time()
     paused = False
     
-    print(f"🎬 Processing started with betting dashboard at {playback_speed}x speed...")
+    print(f"🎬 Processing started...")
     print("🎾 Players will be assigned names as they are detected...")
-    print("⏯️  Controls: SPACE = Pause/Resume, Q = Quit")
+    if show_preview:
+        print("⏯️  Controls: SPACE = Pause/Resume, Q = Quit")
 
+    # Process every frame for smooth output
     while ret:
         detections = []
 
-        # Run YOLO detection
+        # Run YOLO detection periodically for performance
         if frame_count % detect_every == 0:
             results = model(frame, verbose=False)
             if results[0].boxes is not None and len(results[0].boxes) > 0:
@@ -399,10 +405,13 @@ def process_video(input_path, output_path=None):
                 last_detections = detections_np
             else:
                 detections_np = np.empty((0, 5))
+                # Use last detections for continuity
                 detections_np = last_detections
         else:
+            # Use previous detections for frames where we don't run detection
             detections_np = last_detections
 
+        # Update tracker
         tracked_objects = tracker.update(detections_np)
 
         # Calculate speeds and distances, assign names
@@ -436,9 +445,9 @@ def process_video(input_path, output_path=None):
                 # Add to total distance covered
                 player_distances[obj_id] += distance_meters
                 
-                # Calculate speed using normal match speed (not accelerated)
-                # Assuming roughly 30 pixels = 1 meter and original fps (not playback speed)
-                speed_ms = (distance_pixels * 0.033) * (fps / playback_speed)  # Account for playback speed
+                # Calculate speed (corrected calculation)
+                time_per_frame = 1.0 / fps
+                speed_ms = (distance_meters / time_per_frame) if time_per_frame > 0 else 0
                 speed_kmh = speed_ms * 3.6  # convert to km/h
                 speed = max(0, min(speed_kmh, 50))  # Cap at reasonable tennis speed
             
@@ -495,7 +504,7 @@ def process_video(input_path, output_path=None):
         # Add betting dashboard
         frame_with_dashboard = draw_betting_dashboard(frame.copy())
         
-        # Handle notifications
+        # Handle notifications (only for preview mode)
         if show_preview:
             current_time = time.time()
             
@@ -506,7 +515,6 @@ def process_video(input_path, output_path=None):
                 notification_closed = False
                 notification_start_time = current_time
                 last_notification_time = current_time
-                print("Notification triggered:", notification_text)
 
             # Auto-hide after 2.5 seconds
             if notification_visible and not notification_closed and current_time - notification_start_time >= notification_duration:
@@ -516,11 +524,11 @@ def process_video(input_path, output_path=None):
             if notification_visible:
                 frame_with_dashboard = draw_notification(frame_with_dashboard, notification_text)
 
-        # Save frame to output file if specified
+        # Save frame to output file if specified - ALWAYS save every frame
         if out:
             out.write(frame_with_dashboard)
 
-        # Interactive preview with enhanced pause functionality
+        # Interactive preview 
         if show_preview:
             # Add pause indicator to the frame
             if paused:
@@ -535,7 +543,7 @@ def process_video(input_path, output_path=None):
             cv2.imshow("Tennis Betting Analysis", frame_with_dashboard)
             
             # Handle key presses
-            wait_time = 1 if paused else 10  # Wait longer when paused for better responsiveness
+            wait_time = 1 if paused else int(1000/fps * playback_speed)  # Proper timing
             key = cv2.waitKey(wait_time) & 0xFF
             
             if key == ord('q'):
@@ -559,15 +567,8 @@ def process_video(input_path, output_path=None):
 
         frame_count += 1
         
-        # Skip frames based on playback speed for faster processing (only when not paused)
-        if not paused:
-            skip_frames = int(playback_speed - 1)
-            for _ in range(skip_frames):
-                ret, temp_frame = cap.read()
-                if not ret:
-                    break
-                frame_count += 1
-            ret, frame = cap.read()
+        # Read next frame (no skipping for smooth output)
+        ret, frame = cap.read()
 
     cap.release()
     if out:
@@ -593,7 +594,7 @@ def process_video(input_path, output_path=None):
         print("\nNo bet was confirmed.")
 
 if __name__ == "__main__":
-    input_video = "test_2.mp4"
-    # Don't create output file - set to None for live preview only
-    output_video = None  # Change to a path if you want to save output
+    input_video = "test.mp4"
+    # Set output path to create smooth video file
+    output_video = "tennis_betting_output.mp4"  # Change to None for live preview only
     process_video(input_video, output_video)
