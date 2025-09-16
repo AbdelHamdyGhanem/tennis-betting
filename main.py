@@ -1,7 +1,7 @@
 import cv2
 import math
 from ultralytics import YOLO
-from sort import Sort
+from sort.sort import Sort
 import os
 import numpy as np
 import random
@@ -596,5 +596,4 @@ def process_video(input_path, output_path=None):
 if __name__ == "__main__":
     input_video = "test.mp4"
     # Set output path to create smooth video file
-    output_video = "tennis_betting_output.mp4"  # Change to None for live preview only
-    process_video(input_video, output_video)
+    process_video(input_video)
